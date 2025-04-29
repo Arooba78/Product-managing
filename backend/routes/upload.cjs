@@ -4,9 +4,9 @@ const AWS = require("aws-sdk");
 const router = express.Router();
 
 const s3 = new AWS.S3({
-  region: 'eu-north-1',
-  accessKeyId: 'AKIAZUMCTEK7UZC4OPTX',
-  secretAccessKey: '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',
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY, 
 });
 
 router.get("/upload-url", async (req, res) => {
