@@ -1,0 +1,22 @@
+.dashboard {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+  }
+  
+  th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+  }
+  
+  img {
+    max-width: 100px;
+    height: auto;
+  }
+  

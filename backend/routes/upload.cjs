@@ -1,20 +1,33 @@
 const express = require("express");
 const AWS = require("aws-sdk");
+const { Client } = require("pg"); // Import the PostgreSQL client
 
 const router = express.Router();
 
 const s3 = new AWS.S3({
-  region: process.env.AWS_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY, 
+  region: process.env.region,
+  accessKeyId: process.env.key,
+  secretAccessKey: process.env.secretKey, 
 });
 
-router.get("/upload-url", async (req, res) => {
+// PostgreSQL client setup
+const client = new Client({
+  user: 'products',  // database user
+  host: 'localhost',
+  database: 'products',  // database name
+  password: 'arooba777', // password for the database
+  port: 5432,
+});
+
+client.connect(); // Connect to PostgreSQL
+
+// S3 upload URL generation
+router.get("/s3_upload", async (req, res) => {
   const { filename, filetype } = req.query;
-  console.log(filename)
+  console.log(filename);
   const encodedFilename = encodeURIComponent(filename);
   const params = {
-    Bucket: process.env.S3_BUCKET_NAME,
+    Bucket: 's3practiceproj',
     Key: `products/${encodedFilename}`,
     Expires: 60,
     ContentType: filetype,
@@ -29,12 +42,37 @@ router.get("/upload-url", async (req, res) => {
   }
 });
 
-router.post("/save-metadata", (req, res) => {
+// Save metadata into the database
+router.post("/save_metadata", async (req, res) => {
   const { title, description, imageUrl } = req.body;
 
-  console.log("Metadata saved:", { title, description, imageUrl });
+  const filename = imageUrl.split("/").pop();
 
-  res.status(200).json({ message: "Metadata saved successfully" });
+  const query = `
+    INSERT INTO product_metadata (title, description, image_url)
+    VALUES ($1, $2, $3)
+    RETURNING *;
+  `;
+
+  try {
+    const result = await client.query(query, [filename, description, imageUrl]);
+    console.log("Metadata saved:", result.rows[0]);
+
+    res.status(200).json({ message: "Metadata saved successfully", product: result.rows[0] });
+  } catch (error) {
+    console.error("Error saving metadata:", error);
+    res.status(500).json({ error: "Failed to save metadata" });
+  }
 });
+router.get("/all_products", async (req, res) => {
+  try {
+    const result = await client.query("SELECT * FROM product_metadata ORDER BY id DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching product data:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 
 module.exports = router;

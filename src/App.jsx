@@ -1,13 +1,20 @@
-// src/App.jsx
 import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import UploadForm from "./components/uploadForm";
+import Dashboard from "./components/dashboard";
 
 function App() {
   return (
-    <div className="App">
-      <h1>Product Image Upload</h1>
-      <UploadForm />
-    </div>
+    <Router>
+      <nav>
+        <Link to="/">Upload Product</Link> | 
+        <Link to="/dashboard">Dashboard</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<UploadForm />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </Router>
   );
 }
 
