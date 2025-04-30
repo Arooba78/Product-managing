@@ -1,6 +1,7 @@
 const express = require("express");
 const AWS = require("aws-sdk");
 const { sequelize, ProductMetadata } = require("../data/productMetaData.cjs"); // Import Sequelize instance and model
+const { Client } = require("pg"); // Import the PostgreSQL client
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.get("/s3_upload", async (req, res) => {
   }
 });
 
+// Save metadata into the database
 router.post("/save_metadata", async (req, res) => {
   const { title, description, imageUrl } = req.body;
 

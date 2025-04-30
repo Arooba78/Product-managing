@@ -46,6 +46,7 @@ const UploadForm = () => {
       values.description = "";
       setFile(null);
       setImagePreview(null);
+      setImagePreview(null);
     } catch (error) {
       console.error("Error uploading product:", error);
       alert("Error uploading product. Please try again.");
@@ -94,6 +95,16 @@ const UploadForm = () => {
               required
             />
           </div>
+
+          {imagePreview && (
+            <div className="image-preview">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                style={{ maxWidth: "200px", maxHeight: "200px" }}
+              />
+            </div>
+          )}
 
           {/* Live image preview */}
           {imagePreview && (
