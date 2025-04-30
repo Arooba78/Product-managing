@@ -5,16 +5,19 @@ import './uploadForm.css'
 
 const UploadForm = () => {
   const [file, setFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    setImagePreview(URL.createObjectURL(selectedFile));
   };
 
   const handleSubmit = async (values) => {
     const { title, description } = values;
 
     try {
-      const { data } = await axios.get("http://localhost:5000/api/upload-url", {
+      const { data } = await axios.get("http://localhost:5000/api/s3_upload", {
         params: { filename: file.name, filetype: file.type }
       });
 
@@ -27,7 +30,7 @@ const UploadForm = () => {
       const imageUrl = data.url.split("?")[0];
       console.log("Presigned URL:", data.url);
 
-      await axios.post("http://localhost:5000/api/save-metadata", {
+      await axios.post("http://localhost:5000/api/save_metadata", {
         title,
         description,
         imageUrl,
@@ -37,6 +40,7 @@ const UploadForm = () => {
       values.title = "";
       values.description = "";
       setFile(null);
+      setImagePreview(null);
     } catch (error) {
       console.error("Error uploading product:", error);
       alert("Error uploading product. Please try again.");
@@ -82,6 +86,16 @@ const UploadForm = () => {
               required
             />
           </div>
+
+          {imagePreview && (
+            <div className="image-preview">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                style={{ maxWidth: "200px", maxHeight: "200px" }}
+              />
+            </div>
+          )}
 
           <button type="submit">Upload Product</button>
         </Form>
