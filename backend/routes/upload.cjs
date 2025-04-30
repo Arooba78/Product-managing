@@ -1,7 +1,6 @@
 const express = require("express");
 const AWS = require("aws-sdk");
 const { sequelize, ProductMetadata } = require("../data/productMetaData.cjs"); // Import Sequelize instance and model
-const { Client } = require("pg"); // Import the PostgreSQL client
 
 const router = express.Router();
 
@@ -67,5 +66,6 @@ router.get("/all_products", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 module.exports = router;
