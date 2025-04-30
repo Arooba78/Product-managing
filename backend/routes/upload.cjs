@@ -1,35 +1,29 @@
 const express = require("express");
 const AWS = require("aws-sdk");
-const { Client } = require("pg"); // Import the PostgreSQL client
+const { sequelize, ProductMetadata } = require("../data/productMetaData.cjs"); // Import Sequelize instance and model
 
 const router = express.Router();
 
+// Configure AWS S3 credentials and region
 const s3 = new AWS.S3({
-  region: process.env.region,
-  accessKeyId: process.env.key,
-  secretAccessKey: process.env.secretKey, 
+  region: process.env.REGION,
+  accessKeyId: process.env.ACCESS_KEY,
+  secretAccessKey: process.env.SECRET_KEY,
 });
 
-// PostgreSQL client setup
-const client = new Client({
-  user: 'products',  // database user
-  host: 'localhost',
-  database: 'products',  // database name
-  password: 'arooba777', // password for the database
-  port: 5432,
-});
+// Test database connection on server start
+sequelize.authenticate()
+  .then(() => console.log('PostgreSQL connected via Sequelize'))
+  .catch(err => console.error('Database connection error:', err));
 
-client.connect(); // Connect to PostgreSQL
-
-// S3 upload URL generation
 router.get("/s3_upload", async (req, res) => {
   const { filename, filetype } = req.query;
-  console.log(filename);
-  const encodedFilename = encodeURIComponent(filename);
+  const encodedFilename = encodeURIComponent(filename); // It is to ensuree safe URL
+
   const params = {
     Bucket: 's3practiceproj',
     Key: `products/${encodedFilename}`,
-    Expires: 60,
+    Expires: 60, // URL valid for 60 seconds
     ContentType: filetype,
   };
 
@@ -46,30 +40,29 @@ router.get("/s3_upload", async (req, res) => {
 router.post("/save_metadata", async (req, res) => {
   const { title, description, imageUrl } = req.body;
 
-  const filename = imageUrl.split("/").pop();
-
-  const query = `
-    INSERT INTO product_metadata (title, description, image_url)
-    VALUES ($1, $2, $3)
-    RETURNING *;
-  `;
-
   try {
-    const result = await client.query(query, [filename, description, imageUrl]);
-    console.log("Metadata saved:", result.rows[0]);
+    const product = await ProductMetadata.create({
+      title,
+      description,
+      image_url: imageUrl,
+    });
 
-    res.status(200).json({ message: "Metadata saved successfully", product: result.rows[0] });
+    res.status(200).json({ message: "Metadata saved successfully", product });
   } catch (error) {
     console.error("Error saving metadata:", error);
     res.status(500).json({ error: "Failed to save metadata" });
   }
 });
+
 router.get("/all_products", async (req, res) => {
   try {
-    const result = await client.query("SELECT * FROM product_metadata ORDER BY id DESC");
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching product data:", err);
+    const products = await ProductMetadata.findAll({
+      order: [['id', 'DESC']],
+    });
+
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching product data:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
