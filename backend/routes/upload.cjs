@@ -1,7 +1,7 @@
 const express = require("express");
 const AWS = require("aws-sdk");
 const { sequelize, ProductMetadata } = require("../data/productMetaData.cjs"); // Import Sequelize instance and model
-const elasticClient = require("../client/elasticSearchClient.cjs"); // Import Elasticsearch client
+const elasticClient = require("../client/elastiSearchClient.cjs"); // Import Elasticsearch client
 const { Client } = require("pg"); // Import the PostgreSQL client
 
 
@@ -56,7 +56,18 @@ router.post("/save_metadata", async (req, res) => {
       image_url: imageUrl,
     });
 
-    res.status(200).json({ message: "Metadata saved successfully", product: result.rows[0] });
+    // 👇 Index it in Elasticsearch
+    await elasticClient.index({
+      index: 'products',
+      id: product.id.toString(),
+      document: {
+        title: product.title,
+        description: product.description,
+        image_url: product.image_url,
+      }
+    });
+
+    res.status(200).json({ message: "Metadata saved successfully", product });
   } catch (error) {
     console.error("Error saving metadata:", error);
     res.status(500).json({ error: "Failed to save metadata" });
