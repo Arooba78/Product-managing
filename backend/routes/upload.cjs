@@ -56,7 +56,7 @@ router.post("/save_metadata", async (req, res) => {
       image_url: imageUrl,
     });
 
-    // 👇 Index it in Elasticsearch
+    // Index it in Elasticsearch
     await elasticClient.index({
       index: 'products',
       id: product.id.toString(),
