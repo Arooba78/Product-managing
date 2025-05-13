@@ -1,13 +1,16 @@
 const express = require("express");
 const AWS = require("aws-sdk");
+const { sequelize, ProductMetadata } = require("../data/productMetaData.cjs"); // Import Sequelize instance and model
+const elasticClient = require("../client/elastiSearchClient.cjs"); // Import Elasticsearch client
 const { Client } = require("pg"); // Import the PostgreSQL client
+
 
 const router = express.Router();
 
 const s3 = new AWS.S3({
-  region: process.env.region,
-  accessKeyId: process.env.key,
-  secretAccessKey: process.env.secretKey, 
+  region: process.env.REGION,
+  accessKeyId: process.env.ACCESS_KEY,
+  secretAccessKey: process.env.SECRET_KEY,
 });
 
 // PostgreSQL client setup
@@ -46,19 +49,25 @@ router.get("/s3_upload", async (req, res) => {
 router.post("/save_metadata", async (req, res) => {
   const { title, description, imageUrl } = req.body;
 
-  const filename = imageUrl.split("/").pop();
-
-  const query = `
-    INSERT INTO product_metadata (title, description, image_url)
-    VALUES ($1, $2, $3)
-    RETURNING *;
-  `;
-
   try {
-    const result = await client.query(query, [filename, description, imageUrl]);
-    console.log("Metadata saved:", result.rows[0]);
+    const product = await ProductMetadata.create({
+      title,
+      description,
+      image_url: imageUrl,
+    });
 
-    res.status(200).json({ message: "Metadata saved successfully", product: result.rows[0] });
+    // Index it in Elasticsearch
+    await elasticClient.index({
+      index: 'products',
+      id: product.id.toString(),
+      document: {
+        title: product.title,
+        description: product.description,
+        image_url: product.image_url,
+      }
+    });
+
+    res.status(200).json({ message: "Metadata saved successfully", product });
   } catch (error) {
     console.error("Error saving metadata:", error);
     res.status(500).json({ error: "Failed to save metadata" });
@@ -66,11 +75,35 @@ router.post("/save_metadata", async (req, res) => {
 });
 router.get("/all_products", async (req, res) => {
   try {
-    const result = await client.query("SELECT * FROM product_metadata ORDER BY id DESC");
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching product data:", err);
+    const products = await ProductMetadata.findAll({
+      order: [['id', 'DESC']],
+    });
+
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching product data:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+router.get("/search", async (req, res) => {
+  const { query } = req.query;
+
+  try {
+    const result = await elasticClient.search({
+      index: 'products',
+      query: {
+        multi_match: {
+          query,
+          fields: ['title', 'description']
+        }
+      }
+    });
+
+    const hits = result.hits.hits.map(hit => hit._source);
+    res.json(hits);
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ error: "Search failed" });
   }
 });
 
